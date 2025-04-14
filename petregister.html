@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PawPal - Pet Profile Creation</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      body {
+        background-color: #f9f9f9;
+        color: #333;
+        line-height: 1.6;
+      }
+
+      header {
+        background-color: #4a6fa5;
+        color: white;
+        padding: 1rem;
+        text-align: center;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 2rem auto;
+        padding: 2rem;
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      h1 {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+      }
+
+      h2 {
+        color: #4a6fa5;
+        margin-bottom: 1.5rem;
+      }
+
+      .form-group {
+        margin-bottom: 1.5rem;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 1rem;
+      }
+
+      textarea {
+        min-height: 100px;
+        resize: vertical;
+      }
+
+      button {
+        background-color: #4a6fa5;
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+      }
+
+      button:hover {
+        background-color: #3a5a8a;
+      }
+
+      .upload-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 1.5rem;
+      }
+
+      .upload-box {
+        width: 200px;
+        height: 200px;
+        border: 2px dashed #ccc;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        margin-bottom: 1rem;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .upload-box:hover {
+        border-color: #4a6fa5;
+      }
+
+      .upload-box img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: cover;
+      }
+
+      .upload-icon {
+        font-size: 3rem;
+        color: #ccc;
+        margin-bottom: 0.5rem;
+      }
+
+      .upload-text {
+        color: #666;
+        text-align: center;
+      }
+
+      #upload-input {
+        display: none;
+      }
+
+      .breed-options {
+        display: none;
+      }
+
+      .success-message {
+        background-color: #d4edda;
+        color: #155724;
+        padding: 1rem;
+        border-radius: 4px;
+        margin-bottom: 1rem;
+        display: none;
+      }
+
+      .error-message {
+        background-color: #f8d7da;
+        color: #721c24;
+        padding: 1rem;
+        border-radius: 4px;
+        margin-bottom: 1rem;
+        display: none;
+      }
+
+      .loading-indicator {
+        display: inline-block;
+        margin-left: 8px;
+        vertical-align: middle;
+      }
+
+      .loading-indicator::after {
+        content: "";
+        display: block;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 2px solid #fff;
+        border-top-color: transparent;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>PawPal</h1>
+    </header>
+
+    <div class="container">
+      <h2>Create Pet Profile</h2>
+
+      <div id="success-message" class="success-message">
+        Pet profile created successfully!
+      </div>
+
+      <div id="error-message" class="error-message">
+        There was an error creating the pet profile. Please try again.
+      </div>
+
+      <form id="pet-form">
+        <div class="upload-container">
+          <div class="upload-box" id="upload-box">
+            <div id="upload-placeholder">
+              <div class="upload-icon">📷</div>
+              <div class="upload-text">Upload a photo of your pet</div>
+            </div>
+            <img id="preview-image" style="display: none" />
+          </div>
+          <input type="file" id="upload-input" accept="image/*" />
+        </div>
+
+        <div class="form-group">
+          <label for="pet-name">Pet Name</label>
+          <input type="text" id="pet-name" name="pet-name" required />
+        </div>
+
+        <div class="form-group">
+          <label for="pet-type">Pet Type</label>
+          <select id="pet-type" name="pet-type" required>
+            <option value="">Select pet type</option>
+            <option value="dog">Dog</option>
+            <option value="cat">Cat</option>
+            <option value="bird">Bird</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <!-- Dog Breeds -->
+        <div class="form-group breed-options" id="dog-breeds">
+          <label for="dog-breed">Dog Breed</label>
+          <select id="dog-breed" name="dog-breed">
+            <option value="">Select breed</option>
+            <option value="labrador">Labrador Retriever</option>
+            <option value="german-shepherd">German Shepherd</option>
+            <option value="golden-retriever">Golden Retriever</option>
+            <option value="bulldog">Bulldog</option>
+            <option value="beagle">Beagle</option>
+            <option value="poodle">Poodle</option>
+            <option value="rottweiler">Rottweiler</option>
+            <option value="yorkshire">Yorkshire Terrier</option>
+            <option value="boxer">Boxer</option>
+            <option value="dachshund">Dachshund</option>
+            <option value="mixed">Mixed Breed</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <!-- Cat Breeds -->
+        <div class="form-group breed-options" id="cat-breeds">
+          <label for="cat-breed">Cat Breed</label>
+          <select id="cat-breed" name="cat-breed">
+            <option value="">Select breed</option>
+            <option value="siamese">Siamese</option>
+            <option value="persian">Persian</option>
+            <option value="maine-coon">Maine Coon</option>
+            <option value="ragdoll">Ragdoll</option>
+            <option value="bengal">Bengal</option>
+            <option value="abyssinian">Abyssinian</option>
+            <option value="british-shorthair">British Shorthair</option>
+            <option value="sphynx">Sphynx</option>
+            <option value="domestic-shorthair">Domestic Shorthair</option>
+            <option value="domestic-longhair">Domestic Longhair</option>
+            <option value="mixed">Mixed Breed</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <!-- Bird Breeds -->
+        <div class="form-group breed-options" id="bird-breeds">
+          <label for="bird-breed">Bird Type</label>
+          <select id="bird-breed" name="bird-breed">
+            <option value="">Select type</option>
+            <option value="parakeet">Parakeet/Budgie</option>
+            <option value="cockatiel">Cockatiel</option>
+            <option value="canary">Canary</option>
+            <option value="lovebird">Lovebird</option>
+            <option value="finch">Finch</option>
+            <option value="parrot">Parrot</option>
+            <option value="cockatoo">Cockatoo</option>
+            <option value="macaw">Macaw</option>
+            <option value="conure">Conure</option>
+            <option value="african-grey">African Grey</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <!-- Other Pet Type -->
+        <div class="form-group breed-options" id="other-type">
+          <label for="other-pet-type">Specify Pet Type</label>
+          <input type="text" id="other-pet-type" name="other-pet-type" />
+        </div>
+
+        <div class="form-group">
+          <label for="pet-age">Age</label>
+          <input
+            type="text"
+            id="pet-age"
+            name="pet-age"
+            placeholder="e.g., 3 years, 6 months"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="pet-weight">Weight (optional)</label>
+          <input
+            type="text"
+            id="pet-weight"
+            name="pet-weight"
+            placeholder="e.g., 15 lbs"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="pet-gender">Gender</label>
+          <select id="pet-gender" name="pet-gender">
+            <option value="">Select gender</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="unknown">Unknown</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="pet-description">Tell us about your pet (optional)</label>
+          <textarea
+            id="pet-description"
+            name="pet-description"
+            placeholder="Personality, likes, dislikes, special needs, etc."
+          ></textarea>
+        </div>
+
+        <button type="submit" id="submit-btn">Register Pet</button>
+      </form>
+    </div>
+
+    <script>
+      // Firebase configuration - you'll need to replace these values with your own
+      const firebaseConfig = {
+        apiKey: "AIzaSyD-NyRtoDYXbbXTln75p3PQxovTCP5mgWA",
+        authDomain: "pet-care-app-51173.firebaseapp.com",
+        projectId: "pet-care-app-51173",
+        storageBucket: "pet-care-app-51173.firebasestorage.app",
+        messagingSenderId: "752985874438",
+        appId: "1:752985874438:web:6c1eaaac4009588d7c2387",
+        measurementId: "G-J76YN4HL1C",
+      };
+
+      // Initialize Firebase
+      let firebaseApp;
+      let db;
+      let storage;
+
+      // Initialize Firebase once the page loads
+      document.addEventListener("DOMContentLoaded", function () {
+        try {
+          firebaseApp = firebase.initializeApp(firebaseConfig);
+          db = firebaseApp.firestore();
+          storage = firebaseApp.storage();
+          console.log("Firebase initialized successfully");
+        } catch (error) {
+          console.error("Error initializing Firebase:", error);
+          document.getElementById("error-message").textContent =
+            "Could not connect to database. Please try again later.";
+          document.getElementById("error-message").style.display = "block";
+        }
+
+        // Image upload preview
+        const uploadBox = document.getElementById("upload-box");
+        const uploadInput = document.getElementById("upload-input");
+        const previewImage = document.getElementById("preview-image");
+        const uploadPlaceholder = document.getElementById("upload-placeholder");
+
+        uploadBox.addEventListener("click", function () {
+          uploadInput.click();
+        });
+
+        uploadInput.addEventListener("change", function (e) {
+          if (e.target.files && e.target.files[0]) {
+            const reader = new FileReader();
+
+            reader.onload = function (event) {
+              previewImage.src = event.target.result;
+              previewImage.style.display = "block";
+              uploadPlaceholder.style.display = "none";
+            };
+
+            reader.readAsDataURL(e.target.files[0]);
+          }
+        });
+
+        // Pet type and breed selection
+        const petType = document.getElementById("pet-type");
+        const dogBreeds = document.getElementById("dog-breeds");
+        const catBreeds = document.getElementById("cat-breeds");
+        const birdBreeds = document.getElementById("bird-breeds");
+        const otherType = document.getElementById("other-type");
+
+        petType.addEventListener("change", function () {
+          // Hide all breed options first
+          dogBreeds.style.display = "none";
+          catBreeds.style.display = "none";
+          birdBreeds.style.display = "none";
+          otherType.style.display = "none";
+
+          // Show relevant breed options based on pet type
+          if (this.value === "dog") {
+            dogBreeds.style.display = "block";
+          } else if (this.value === "cat") {
+            catBreeds.style.display = "block";
+          } else if (this.value === "bird") {
+            birdBreeds.style.display = "block";
+          } else if (this.value === "other") {
+            otherType.style.display = "block";
+          }
+        });
+
+        // Form submission
+        const petForm = document.getElementById("pet-form");
+        const successMessage = document.getElementById("success-message");
+        const errorMessage = document.getElementById("error-message");
+        const submitBtn = document.getElementById("submit-btn");
+
+        petForm.addEventListener("submit", async function (e) {
+          e.preventDefault();
+
+          // Reset messages
+          successMessage.style.display = "none";
+          errorMessage.style.display = "none";
+
+          // Validate form
+          const petName = document.getElementById("pet-name").value;
+          const petTypeValue = petType.value;
+
+          if (!petName.trim()) {
+            errorMessage.textContent = "Please enter your pet's name.";
+            errorMessage.style.display = "block";
+            return;
+          }
+
+          if (!petTypeValue) {
+            errorMessage.textContent = "Please select your pet's type.";
+            errorMessage.style.display = "block";
+            return;
+          }
+
+          // Show loading state
+          submitBtn.disabled = true;
+          submitBtn.innerHTML =
+            'Registering... <span class="loading-indicator"></span>';
+
+          try {
+            // Initialize pet data object
+            const petData = {
+              name: petName,
+              type: petTypeValue,
+              breed: getSelectedBreed(),
+              age: document.getElementById("pet-age").value,
+              weight: document.getElementById("pet-weight").value,
+              gender: document.getElementById("pet-gender").value,
+              description: document.getElementById("pet-description").value,
+              createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            };
+
+            // Handle image upload if a file was selected
+            const imageFile = uploadInput.files[0];
+            if (imageFile) {
+              // Create a unique filename for the image
+              const filename = `pets/${Date.now()}_${imageFile.name}`;
+              const storageRef = storage.ref(filename);
+
+              // Upload file to Firebase Storage
+              const uploadTask = await storageRef.put(imageFile);
+
+              // Get the download URL
+              const downloadURL = await storageRef.getDownloadURL();
+
+              // Add image URL to pet data
+              petData.imageURL = downloadURL;
+              petData.imagePath = filename;
+            }
+
+            // Add pet data to Firestore
+            const docRef = await db.collection("pets").add(petData);
+
+            console.log("Pet profile created with ID:", docRef.id);
+
+            // Show success message
+            successMessage.style.display = "block";
+
+            // Reset form
+            petForm.reset();
+            previewImage.style.display = "none";
+            uploadPlaceholder.style.display = "block";
+
+            // Hide breed options
+            dogBreeds.style.display = "none";
+            catBreeds.style.display = "none";
+            birdBreeds.style.display = "none";
+            otherType.style.display = "none";
+
+            // Scroll to top to see success message
+            window.scrollTo(0, 0);
+          } catch (error) {
+            console.error("Error creating pet profile:", error);
+            errorMessage.textContent =
+              "There was an error creating the pet profile. Please try again.";
+            errorMessage.style.display = "block";
+          } finally {
+            // Reset button state
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Register Pet";
+          }
+        });
+
+        // Helper function to get selected breed based on pet type
+        function getSelectedBreed() {
+          if (petType.value === "dog") {
+            return document.getElementById("dog-breed").value;
+          } else if (petType.value === "cat") {
+            return document.getElementById("cat-breed").value;
+          } else if (petType.value === "bird") {
+            return document.getElementById("bird-breed").value;
+          } else if (petType.value === "other") {
+            return document.getElementById("other-pet-type").value;
+          }
+          return "";
+        }
+      });
+    </script>
+  </body>
+</html>

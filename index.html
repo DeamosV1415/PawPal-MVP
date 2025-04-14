@@ -281,9 +281,9 @@
                     const user = userCredential.user;
                     showMessage('Login successful! Redirecting...', 'success');
                     
-                    // Redirect to dashboard or home page after successful login
+                    // Redirect to pet registration page after successful login
                     setTimeout(() => {
-                        window.location.href = '/dashboard.html'; // Replace with your dashboard URL
+                        window.location.href = '/pet-register.html';
                     }, 1500);
                 })
                 .catch((error) => {
